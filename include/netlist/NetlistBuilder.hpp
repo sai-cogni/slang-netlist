@@ -106,10 +106,19 @@ class NetlistBuilder : public ast::ASTVisitor<NetlistBuilder,
   /// executed.
   bool collectingPhase = false;
 
+  /// When true, create Variable nodes for non-interface driven internal
+  /// variables so they can be used as graph lookup / path endpoints.
+  bool materializeInternalVariables = false;
+
+  /// Root symbol from the most recent build, used by finalize-time enrichment
+  /// passes that need the completed graph.
+  ast::Symbol const *buildRoot = nullptr;
+
 public:
   NetlistBuilder(ast::Compilation &compilation,
                  analysis::AnalysisManager &analysisManager,
-                 NetlistGraph &graph);
+                 NetlistGraph &graph,
+                 bool materializeInternalVariables = false);
 
   /// Convert a slang SourceLocation to a TextLocation using the
   /// compilation's SourceManager and the graph's FileTable.
@@ -155,6 +164,9 @@ private:
   /// Drain deferred graph work buffers into the shared graph sequentially.
   void drainDeferredWork(std::vector<DeferredGraphWork> &allWork);
 
+  /// Populate branch predicates on assignment nodes and data edges.
+  void populateBranchPredicates(ast::Symbol const &root);
+
   /// Execute the DFA for a procedural block.
   void handleProceduralBlock(ast::ProceduralBlockSymbol const &symbol);
 
@@ -192,7 +204,9 @@ private:
       -> NetlistNode &;
 
   /// Create an assignment node in the netlist.
-  auto createAssignment(ast::AssignmentExpression const &expr) -> NetlistNode &;
+  auto createAssignment(ast::AssignmentExpression const &expr,
+                        AssignmentType assignmentType, bool isBlocking)
+      -> NetlistNode &;
 
   /// Create a conditional node in the netlist.
   auto createConditional(ast::ConditionalStatement const &stmt)

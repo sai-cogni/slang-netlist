@@ -1,9 +1,11 @@
 #pragma once
 
 #include <atomic>
+#include <optional>
 #include <string>
 #include <utility>
 
+#include "netlist/BranchPredicate.hpp"
 #include "netlist/DirectedGraph.hpp"
 #include "netlist/DriverMap.hpp"
 #include "netlist/TextLocation.hpp"
@@ -23,6 +25,17 @@ enum class NodeKind {
   Case,
   Merge,
   State,
+};
+
+enum class AssignmentType {
+  Continuous = 0,
+  Initial,
+  Final,
+  Always,
+  AlwaysComb,
+  AlwaysLatch,
+  AlwaysFF,
+  Procedural,
 };
 
 /// Represent a node in the netlist, corresponding to a variable or an
@@ -114,9 +127,14 @@ public:
 class Assignment : public NetlistNode {
 public:
   TextLocation location;
+  AssignmentType assignmentType;
+  bool isBlocking;
+  std::optional<BranchPredicate> branchPredicate;
 
-  Assignment(TextLocation location)
-      : NetlistNode(NodeKind::Assignment), location(location) {}
+  Assignment(TextLocation location, AssignmentType assignmentType,
+             bool isBlocking)
+      : NetlistNode(NodeKind::Assignment), location(location),
+        assignmentType(assignmentType), isBlocking(isBlocking) {}
 
   static auto isKind(NodeKind otherKind) -> bool {
     return otherKind == NodeKind::Assignment;
